@@ -34,7 +34,7 @@ def thread_send():
             try:
                 SEND_SOCKET.sendto(MESSAGE, (p, UDP_RECEIVE_PORT))
             except:
-                if p not in detected:
+                if p not in DETECTED:
                     DETECTED.append(p)
         time.sleep(2)        
 
