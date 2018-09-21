@@ -3,13 +3,14 @@ import socket
 import _thread
 import time
 
-MESSAGE = bytearray()
-MESSAGE_2 = bytearray()
+MESSAGE_REQUEST = "HeartbeatRequest"
+MESSAGE_RESPONSE = "HeartbeatReply"
+MESSAGE_REQUEST_PROCESS = "ProcessRequest"
+MESSAGE_PROCESS_RESPONSE_YES = "ProcessAnswerYes;" 
+MESSAGE_PROCESS_RESPONSE_NO = "ProcessAnswerNo" 
+MESSAGE_PROCESS_STOP = "ProcessStop"
 
-MESSAGE.append(1)
-MESSAGE_2.append(2)
-
-UDP_IP = "172.18.3.100"
+UDP_IP = "172.18.8.18"
 UDP_SEND_PORT = 6000
 UDP_RECEIVE_PORT = 6001
 
@@ -19,11 +20,14 @@ SEND_SOCKET.bind((UDP_IP, UDP_SEND_PORT))
 LISTEN_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 LISTEN_SOCKET.bind((UDP_IP, UDP_RECEIVE_PORT))
 
-ALL_IPS = ["172.18.1.41", "172.18.2.209", "172.18.3.100", "172.17.98.96", "172.18.1.52"]
+ALL_IPS = ["172.18.2.217", "172.18.8.18", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
 MUTEX = _thread.allocate_lock()
-ALIVE = ["172.18.1.41", "172.18.2.209", "172.18.3.100", "172.17.98.96", "172.18.1.52"]
+ALIVE = ["172.18.2.217", "172.18.8.18", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
 DETECTED = []
 LEADER = ""
+PROCESS_NUMBER_RANGE = []
+PROCESS_TO_SEND = []
+CAN_PROCESS = False
 
 clear = lambda: os.system('cls')
 
@@ -32,17 +36,16 @@ def thread_send():
     while True:            
         for p in ALL_IPS:
             try:
-                SEND_SOCKET.sendto(MESSAGE, (p, UDP_RECEIVE_PORT))
+                SEND_SOCKET.sendto(MESSAGE_REQUEST.encode(), (p, UDP_RECEIVE_PORT))
             except:
                 if p not in DETECTED:
                     DETECTED.append(p)
         time.sleep(2)        
-
-        if LEADER not in ALIVE:
-            for ip in ALL_IPS:
-                if ip in ALIVE:
-                    LEADER = ip
-                    break
+        
+        for ip in ALL_IPS:
+            if ip in ALIVE:
+                LEADER = ip
+                break
                  
         MUTEX.acquire()
         for ip in ALL_IPS:
@@ -57,23 +60,49 @@ def thread_send():
         MUTEX.release()                                        
 
 def thread_listen():    
+    global CAN_PROCESS
     while True:
         message_received, ip_sender = LISTEN_SOCKET.recvfrom(1024)
         ip_sender = ip_sender[0]
-        message_received = message_received[0]
+        message_received = message_received.decode()
         
         if message_received != UDP_IP:    
-            print("\nMensagem recebida => {} enviado por => {}".format(str(message_received), ip_sender))
+            print("\nMensagem recebida => {} enviado por => {}".format(message_received, ip_sender))
         
-        if message_received == 1:
-            SEND_SOCKET.sendto(MESSAGE_2, (ip_sender, UDP_RECEIVE_PORT))       
+        if message_received == MESSAGE_REQUEST:
+            SEND_SOCKET.sendto(MESSAGE_RESPONSE.encode(), (ip_sender, UDP_RECEIVE_PORT))       
 
-        elif message_received == 2:                
+        elif message_received == MESSAGE_RESPONSE:                
             if ip_sender not in ALIVE and not MUTEX.locked():
                 ALIVE.append(ip_sender)
 
+        elif LEADER is UDP_IP and message_received == MESSAGE_REQUEST_PROCESS:
+            PROCESS_TO_SEND.append(ip_sender)
+
+        elif CAN_PROCESS is True and message_received == MESSAGE_PROCESS_STOP and ip_sender == LEADER:
+            CAN_PROCESS = False
+
+
+def thread_hash():
+    found_hash = False
+    while True:
+        if LEADER != "":
+            SEND_SOCKET.sendto(MESSAGE_REQUEST_PROCESS.encode(), (LEADER, UDP_RECEIVE_PORT))
+            while CAN_PROCESS is True and found_hash is False:            
+                print("\nProcessing Hash {}".format(PROCESS_NUMBER_RANGE))
+                found_hash = True
+
+
+def thread_leader():
+    while True:
+        for ip in PROCESS_TO_SEND:
+            SEND_SOCKET.sendto("numbers range to calculate hash".encode(), (ip, UDP_RECEIVE_PORT))  
+            #execute proccess
+
 _thread.start_new_thread(thread_send, ())
 _thread.start_new_thread(thread_listen, ())
+_thread.start_new_thread(thread_leader, ())
+_thread.start_new_thread(thread_hash, ())
 
 while True:
     pass
