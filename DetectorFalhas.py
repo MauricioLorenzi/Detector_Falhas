@@ -10,7 +10,7 @@ MESSAGE_PROCESS_RESPONSE_YES = "ProcessAnswerYes;"
 MESSAGE_PROCESS_RESPONSE_NO = "ProcessAnswerNo" 
 MESSAGE_PROCESS_STOP = "ProcessStop"
 
-UDP_IP = "172.18.8.18"
+UDP_IP = "172.17.99.154"
 UDP_SEND_PORT = 6000
 UDP_RECEIVE_PORT = 6001
 
@@ -20,9 +20,9 @@ SEND_SOCKET.bind((UDP_IP, UDP_SEND_PORT))
 LISTEN_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 LISTEN_SOCKET.bind((UDP_IP, UDP_RECEIVE_PORT))
 
-ALL_IPS = ["172.18.2.217", "172.18.8.18", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
+ALL_IPS = ["172.18.2.217", "172.17.99.154", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
 MUTEX = _thread.allocate_lock()
-ALIVE = ["172.18.2.217", "172.18.8.18", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
+ALIVE = ["172.18.2.217", "172.17.99.154", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
 DETECTED = []
 LEADER = ""
 PROCESS_NUMBER_RANGE = []
@@ -86,7 +86,7 @@ def thread_listen():
 def thread_hash():
     found_hash = False
     while True:
-        if LEADER != "":
+        if LEADER != "" and LEADER != UDP_IP:
             SEND_SOCKET.sendto(MESSAGE_REQUEST_PROCESS.encode(), (LEADER, UDP_RECEIVE_PORT))
             while CAN_PROCESS is True and found_hash is False:            
                 print("\nProcessing Hash {}".format(PROCESS_NUMBER_RANGE))
@@ -96,7 +96,8 @@ def thread_hash():
 def thread_leader():
     while True:
         for ip in PROCESS_TO_SEND:
-            SEND_SOCKET.sendto("numbers range to calculate hash".encode(), (ip, UDP_RECEIVE_PORT))  
+            if ip != UDP_IP:
+                SEND_SOCKET.sendto("numbers range to calculate hash".encode(), (ip, UDP_RECEIVE_PORT))  
             #execute proccess
 
 _thread.start_new_thread(thread_send, ())
