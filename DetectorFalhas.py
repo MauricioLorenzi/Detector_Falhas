@@ -10,7 +10,7 @@ MESSAGE_PROCESS_RESPONSE_YES = "ProcessAnswerYes;"
 MESSAGE_PROCESS_RESPONSE_NO = "ProcessAnswerNo" 
 MESSAGE_PROCESS_STOP = "ProcessStop"
 
-UDP_IP = "172.17.99.154"
+UDP_IP = "10.110.5.244"
 UDP_SEND_PORT = 6000
 UDP_RECEIVE_PORT = 6001
 
@@ -20,9 +20,9 @@ SEND_SOCKET.bind((UDP_IP, UDP_SEND_PORT))
 LISTEN_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 LISTEN_SOCKET.bind((UDP_IP, UDP_RECEIVE_PORT))
 
-ALL_IPS = ["172.18.2.217", "172.17.99.154", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
+ALL_IPS = ["10.110.5.244", "10.110.4.245"]
 MUTEX = _thread.allocate_lock()
-ALIVE = ["172.18.2.217", "172.17.99.154", "172.18.1.41", "172.18.1.52", "172.17.128.81", "172.18.3.79", "172.18.3.78"]
+ALIVE = ["10.110.5.244", "10.110.4.245"]
 DETECTED = []
 LEADER = ""
 PROCESS_NUMBER_RANGE = []
@@ -73,7 +73,7 @@ def thread_listen():
             SEND_SOCKET.sendto(MESSAGE_RESPONSE.encode(), (ip_sender, UDP_RECEIVE_PORT))       
 
         elif message_received == MESSAGE_RESPONSE:                
-            if ip_sender not in ALIVE and not MUTEX.locked():
+            if ip_sender not in ALIVE and ip_sender not in DETECTED and not MUTEX.locked():
                 ALIVE.append(ip_sender)
 
         elif LEADER is UDP_IP and message_received == MESSAGE_REQUEST_PROCESS:
@@ -87,6 +87,7 @@ def thread_hash():
     found_hash = False
     while True:
         if LEADER != "" and LEADER != UDP_IP:
+            time.sleep(2)
             SEND_SOCKET.sendto(MESSAGE_REQUEST_PROCESS.encode(), (LEADER, UDP_RECEIVE_PORT))
             while CAN_PROCESS is True and found_hash is False:            
                 print("\nProcessing Hash {}".format(PROCESS_NUMBER_RANGE))
@@ -97,6 +98,7 @@ def thread_leader():
     while True:
         for ip in PROCESS_TO_SEND:
             if ip != UDP_IP:
+                time.sleep(2)
                 SEND_SOCKET.sendto("numbers range to calculate hash".encode(), (ip, UDP_RECEIVE_PORT))  
             #execute proccess
 
