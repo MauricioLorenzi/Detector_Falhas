@@ -1,3 +1,7 @@
+#Bruno de Castro RA: 140576
+#Gabriel Nistardo RA: 140839
+#Mauricio Luis de Lorenzi RA: 141269
+
 import os
 import socket
 import _thread
@@ -5,10 +9,11 @@ import time
 
 MESSAGE_REQUEST = "HeartbeatRequest"
 MESSAGE_RESPONSE = "HeartbeatReply"
-MESSAGE_REQUEST_PROCESS = "ProcessRequest"
+MESSAGE_PROCESS_REQUEST = "ProcessRequest"
+MESSAGE_PROCESS_RESPONSE = "Process;[inicio];[fim]"
 MESSAGE_PROCESS_RESPONSE_YES = "ProcessAnswerYes;" 
 MESSAGE_PROCESS_RESPONSE_NO = "ProcessAnswerNo" 
-MESSAGE_PROCESS_STOP = "ProcessStop"
+MESSAGE_PROCESS_STOP = "ProcessInterrupt"
 
 UDP_IP = "10.110.5.244"
 UDP_SEND_PORT = 6000
@@ -76,7 +81,7 @@ def thread_listen():
             if ip_sender not in ALIVE and ip_sender not in DETECTED and not MUTEX.locked():
                 ALIVE.append(ip_sender)
 
-        elif LEADER is UDP_IP and message_received == MESSAGE_REQUEST_PROCESS:
+        elif LEADER is UDP_IP and message_received == MESSAGE_PROCESS_REQUEST:
             PROCESS_TO_SEND.append(ip_sender)
 
         elif CAN_PROCESS is True and message_received == MESSAGE_PROCESS_STOP and ip_sender == LEADER:
@@ -88,7 +93,7 @@ def thread_hash():
     while True:
         if LEADER != "" and LEADER != UDP_IP:
             time.sleep(2)
-            SEND_SOCKET.sendto(MESSAGE_REQUEST_PROCESS.encode(), (LEADER, UDP_RECEIVE_PORT))
+            SEND_SOCKET.sendto(MESSAGE_PROCESS_REQUEST.encode(), (LEADER, UDP_RECEIVE_PORT))
             while CAN_PROCESS is True and found_hash is False:            
                 print("\nProcessing Hash {}".format(PROCESS_NUMBER_RANGE))
                 found_hash = True
@@ -99,7 +104,7 @@ def thread_leader():
         for ip in PROCESS_TO_SEND:
             if ip != UDP_IP:
                 time.sleep(2)
-                SEND_SOCKET.sendto("numbers range to calculate hash".encode(), (ip, UDP_RECEIVE_PORT))  
+                SEND_SOCKET.sendto(MESSAGE_PROCESS_RESPONSE.encode(), (ip, UDP_RECEIVE_PORT))  
             #execute proccess
 
 _thread.start_new_thread(thread_send, ())
